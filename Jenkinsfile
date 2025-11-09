@@ -222,27 +222,39 @@ EOF
                             git remote set-url origin "${GIT_REPO_HTTPS}"
                         """
                     }*/
-                    withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                      sh '''
-                    set -e
-                    git config user.email "jenkins@yourdomain"
-                    git config user.name "jenkins"
-                
-                    git checkout ${GIT_BRANCH} || true
-                    git pull origin ${GIT_BRANCH} || true
-                
-                    # temporarily set remote with creds (only inside this shell)
-                    git remote set-url origin "https://${GIT_USER}:${GIT_PASS}@github.com/arjunpilakkal/argo-cd.git"
-                
-                    git add ${K8S_PATH}/deployment.yaml ${K8S_PATH}/kustomization.yaml ${K8S_PATH}/service.yaml || true
-                    git commit -m "ci: bump myapp image to ${NEW_TAG} by Jenkins #${env.BUILD_NUMBER}" || echo "No manifest changes"
-                
-                    git push origin ${GIT_BRANCH} || (echo "Push failed - ensure credentials are correct" && exit 1)
-                
-                    # restore the remote (cleanup)
-                    git remote set-url origin "${GIT_REPO_HTTPS}"
-                  '''
-                    }
+                                withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                                  sh """
+                                    set -eux
+                                
+                                    git config user.email "jenkins@yourdomain"
+                                    git config user.name "jenkins"
+                                
+                                    git checkout ${GIT_BRANCH} || true
+                                    git pull origin ${GIT_BRANCH} || true
+                                
+                                    # create a temporary .netrc so git can authenticate without embedding creds in the URL
+                                    cat > ~/.netrc <<'NETRC'
+                                machine github.com
+                                login ${GIT_USER}
+                                password ${GIT_PASS}
+                                NETRC
+                                    chmod 600 ~/.netrc
+                                
+                                    # ensure origin uses standard HTTPS form (no credentials in URL)
+                                    git remote set-url origin "${GIT_REPO_HTTPS}"
+                                
+                                    git add ${K8S_PATH}/deployment.yaml ${K8S_PATH}/kustomization.yaml ${K8S_PATH}/service.yaml || true
+                                    git --no-pager diff --staged || true
+                                
+                                    git commit -m "ci: bump myapp image to ${NEW_TAG} by Jenkins #${env.BUILD_NUMBER}" || echo "No manifest changes to commit"
+                                
+                                    # push (will use ~/.netrc)
+                                    git push origin ${GIT_BRANCH} || (echo "Push failed - ensure credentials are correct" && exit 1)
+                                
+                                    # cleanup .netrc
+                                    shred -u ~/.netrc || rm -f ~/.netrc || true
+                                  """
+                                }
                 }
             }
         }
