@@ -211,7 +211,7 @@ EOF
                             # replace remote origin to include credentials for push
                             # NOTE: this will expose the token in process list for a short time on some systems;
                             # if you prefer, configure SSH key (sshagent) and remove these lines.
-                            REMOTE_URL="https://${GIT_USER}:${GIT_PASS}@github.com/Darshancr9/assign_anil.git"
+                            REMOTE_URL="https://${GIT_USER}:${GIT_PASS}@https://github.com/arjunpilakkal/argo-cd.git"
                             git remote set-url origin "${REMOTE_URL}"
 
                             git add ${K8S_PATH}/deployment.yaml ${K8S_PATH}/kustomization.yaml ${K8S_PATH}/service.yaml || true
