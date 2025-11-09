@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+images:
+  - name: 116099575554.dkr.ecr.us-east-1.amazonaws.com/myapp
+    newTag: TAG_PLACEHOLDER
+
