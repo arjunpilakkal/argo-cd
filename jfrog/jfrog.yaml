@@ -1,0 +1,144 @@
+# -------------------------------------
+# Namespace
+# -------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jfrog
+
+---
+
+# -------------------------------------
+# StorageClass (Local Storage)
+# -------------------------------------
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+
+# -------------------------------------
+# Persistent Volume (PV)
+# -------------------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jfrog-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/jfrog-data
+    type: DirectoryOrCreate
+
+---
+
+# -------------------------------------
+# Persistent Volume Claim (PVC)
+# -------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jfrog-pvc
+  namespace: jfrog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-storage
+
+---
+
+# -------------------------------------
+# Deployment (JFrog Artifactory OSS)
+# -------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jfrog
+  namespace: jfrog
+  labels:
+    app: jfrog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jfrog
+  template:
+    metadata:
+      labels:
+        app: jfrog
+    spec:
+      securityContext:
+        fsGroup: 1030  # Ensures container can write to PV
+      containers:
+        - name: jfrog
+          image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.77.9
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+            - containerPort: 8082
+          volumeMounts:
+            - name: jfrog-data
+              mountPath: /var/opt/jfrog/artifactory
+          resources:
+            requests:
+              memory: "6Gi"
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          livenessProbe:
+            httpGet:
+              path: /artifactory/webapp/
+              port: 8082
+            initialDelaySeconds: 600  # Wait 10 mins before first check
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /artifactory/webapp/
+              port: 8082
+            initialDelaySeconds: 600  # Wait 10 mins before first check
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: jfrog-data
+          persistentVolumeClaim:
+            claimName: jfrog-pvc
+
+---
+
+# -------------------------------------
+# Service (NodePort)
+# -------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: jfrog-service
+  namespace: jfrog
+spec:
+  type: NodePort
+  selector:
+    app: jfrog
+  ports:
+    - name: artifactory-ui
+      port: 8082
+      targetPort: 8082
+      nodePort: 30081
+    - name: artifactory-router
+      port: 8081
+      targetPort: 8081
+      nodePort: 30080
+
