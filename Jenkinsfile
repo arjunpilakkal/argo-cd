@@ -6,7 +6,7 @@ pipeline {
         ARTIFACTORY_SERVER_ID = 'ArtifactoryServer' // Server ID from Jenkins Artifactory config
         AWS_REGION = 'us-east-1'                    // AWS region
         ECR_REPO = '116099575554.dkr.ecr.us-east-1.amazonaws.com/myapp'
-        GIT_REPO_HTTPS = 'https://github.com/Darshancr9/assign_anil.git'
+        GIT_REPO_HTTPS = 'https://github.com/arjunpilakkal/argo-cd.git'
         GIT_BRANCH = 'main'
         K8S_PATH = 'k8s'                            // path ArgoCD watches
     }
