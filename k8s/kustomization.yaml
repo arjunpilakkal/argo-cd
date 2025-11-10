@@ -5,5 +5,5 @@ resources:
   - service.yaml
 images:
   - name: 116099575554.dkr.ecr.us-east-1.amazonaws.com/myapp
-    newTag: TAG_PLACEHOLDER
+    newTag: latest
 
