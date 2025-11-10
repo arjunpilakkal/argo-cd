@@ -18,7 +18,7 @@ spec:
         - name: regcred
       containers:
         - name: myapp
-          image: 116099575554.dkr.ecr.us-east-1.amazonaws.com/myapp:latest
+          image: 116099575554.dkr.ecr.us-east-1.amazonaws.com/myapp:${env.BUILD_NUMBER}
           ports:
             - containerPort: 8080
           readinessProbe:
